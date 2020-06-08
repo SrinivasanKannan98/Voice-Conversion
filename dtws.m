@@ -1,4 +1,5 @@
 function[dw_target, dw_source, p, q] = dtws(d_target,d_source)
+%This code has been borrowed from the webpage of Prof. Dan Ellis of Columbia University
 %This function performs Dynamic Time Warping on the LP coefficients of the
 %source and target utterances
 
