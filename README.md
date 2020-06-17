@@ -1,13 +1,21 @@
 # Voice-Conversion
 
-Two methods of Voice Transformation have been proposed
+Two Methods of Voice Conversion have been proposed in this work
 
-The first method is implemented in 'Main_2.m' where pitch modification is done on the residual signal of the test utterance during the offline conversion
+1) The First Method performs Pitch Modification on the Residual Signal of the given input signal during offline conversion
+2) The Second Method performs Pitch Modification on the Input Signal itself during offline conversion
 
-The second method is implemented in 'Main_3.m' where pitch modification is done on the actual test utterance during offline conversion
+For testing Method 1, run 'Main_2.m' and for testing Method 2 run 'Main_3.m'
+For selecting the Method of conversion at runtime, run 'Voice_Conversion.m'
+For GUI app, run 'Voice_Conversion_GUI'
 
-Both Methods have an option of doing the process with or without Pre-Emphasis. If the trained models are to be directly used, the respective portion on the code has to be uncommented suitably.
+Voice Conversion can either be done for the given data, using trained models, or, done after training a new conversion model. For using the framework for a new pair of speakers, 
+training data of atleast 60 seconds of parallel utterances from both speakers is required, which is broken down to audio files containing about 3 seconds of speech each. If 
+the entire training utterance is used directly, Dynamic Time Warping used before training the Neural Network will take a significant amount of time.
 
-Dependencies: The project requires MATLAB R2016 or above with the Deep Learning Toolbox installed. A CUDA enabled NVIDIA GPU is required for quick training. It also requires Praat.exe to be installed for Windows in the folder of the project
+Pre-Requisites:
 
-The database used in this work is the CMU Arctic Database. The proposed algorithm has been demonstrated for conversion between BDL(American Male) and SLT(American Female) and vice-versa.
+MATLAB R2017 or above is required. Deep Learning Toolbox is to be installed. A CUDA enabled NVIDIA GPU is recommended. 
+Praat.exe has to be installed in the project directory - https://www.fon.hum.uva.nl/praat/.
+
+The database used for testing the framework is the CMU Arctic Database. Outputs of conversion between BDL(American Male) and SLT(American Female) and vice-versa, have been given.
