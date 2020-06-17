@@ -29,6 +29,16 @@ numTrainSamples = 50; % No. of Parallel Utterances used for training
 preemphasise = 1; %If equal to 1 Pre-Emphasis is done on the signal during LP Analysis
 method = 'Method 1';
 
+if(strcmp(lpcOrder,'Default'))
+	if(strcmp(nme_source,'BDL'))
+	    lpcOrder = 16;
+	elseif(strcmp(nme_source,'SLT'))
+	    lpcOrder = 20;
+	else
+	    lpcOrder = 24;
+	end
+end
+
 switch lpcOrder %Decision of Number of Neurons in hidden layer of ANN based on the LPC Order
     case 16
         numHiddenNeurons = 27;
