@@ -23,10 +23,21 @@ l_s = [];
 F0_s = []; %Arrays to hold the average fundamental frequency of each training utterance 
 F0_t = [];
 
-lpcOrder = 24; %Prediction Order
+method = 'Method 2';
+lpcOrder = input('Enter the order for LP Analysis {16/20/24/''Default''} : '); %Prediction Order
 winName = "hann"; %Type of window used for Windowing to prevent Gibbs Oscillations
 numTrainSamples = 50; % No. of Parallel Utterances used for training
-preemphasise = 0; %If equal to 1 Pre-Emphasis is done on the signal during LP Analysis
+preemphasise = 1; %If equal to 1 Pre-Emphasis is done on the signal during LP Analysis
+
+if(strcmp(lpcOrder,'Default'))
+    if(strcmp(nme_source,'BDL'))
+        lpcOrder = 16;
+    elseif(strcmp(nme_source,'SLT'))
+        lpcOrder = 20;
+    else
+        lpcOrder = 24;
+    end
+end
 
 switch lpcOrder %Decision of Number of Neurons in hidden layer of ANN based on the LPC Order
     case 16
@@ -51,11 +62,11 @@ for k = 1 : numTrainSamples
     
     [~,~,f0s,~] = F0Estimation(source,fs_source); %The fundamental frequency of each training utterance pair is estimated and stored in an array
     [~,~,f0t,~] = F0Estimation(target,fs_target); 
-    multiply = f0t/f0s; %Scaling factor for pitch modification
+    sf = f0t/f0s; %Scaling factor for pitch modification
     
     [status,result] = system('delete_temp.bat'); %Use Praat to modify the Pitch of the source utterance to match that of the target utterance
     audiowrite('temp.wav',source,fs_source);
-    [status,result] = system("Praat.exe --run PSOLA.praat" + " " + multiply);
+    [status,result] = system("Praat.exe --run PSOLA.praat" + " " + sf);
     [source,~] = audioread('temp_1.wav');
     
     %% Feature Extraction Stage
@@ -89,19 +100,27 @@ netLSF = train(netLSF,l_s,l_t,'UseGPU','yes'); %The network model is trained usi
 % fprintf("\nSelect the trained model\n");
 % [file,path] = uigetfile('*.mat');
 % load(fullfile(path,file));
-% 
-% fprintf("Select the fundamental frequency array\n");
-% [file,path] = uigetfile('*.mat');
-% load(fullfile(path,file));
 
 %% Testing Stage
 
 fprintf("Select a file for testing\n"); %Select the file for testing the conversion model
 [file,path] = uigetfile('*.wav');
 [test,fs_test] = audioread(fullfile(path,file));
+temp = find(path == '\');
+nme_test = path(temp(end - 1) + 1 : temp(end) - 1);
 
 frameLen = floor(0.030 * fs_test);
 hopLen = floor(0.010 * fs_test);
+
+if(strcmp(lpcOrder,'Default'))
+    if(strcmp(nme_test,'BDL'))
+        lpcOrder = 16;
+    elseif(strcmp(nme_test,'SLT'))
+        lpcOrder = 20;
+    else
+        lpcOrder = 24;
+    end
+end
     
 %Pitch Modification
 
@@ -128,7 +147,6 @@ a_morph = lsf2lpc(lsf_morph); %Convert the modified LSF parameters back to LP Co
 %Speech Reconstruction
 
 morph = lpSynthesis(a_morph,g_test,r_test,fs_test,frameLen,hopLen,winName,preemphasise); %Reconstruct the morphed utterance using LP Synthesis
-morph = morph ./ (max(abs(morph)) + 0.01);
 
 %Post Processing
 
@@ -141,43 +159,19 @@ audiowrite('temp.wav',morph,fs_test);
 [morph,~] = audioread('temp_1.wav');
 morph = filter([1 -1],[1 -0.99],morph); %Filter out low-freq components
 morph = filter([1 1],[1 0.99],morph); %Filter out high-freq noise
-morph = morph ./ (max(abs(morph)) + 0.01);
-
-if(preemphasise == 1)
-    pr = "Pre-Emphasised";
-else
-    pr = "Not Pre-Emphasised";
-end
-temp = find(path == '\');
-nme = path(temp(end - 1) + 1 : temp(end) - 1);
-if(strcmp(nme,'SLT'))
-    conv = "F2M";
-else
-    conv = "M2F";
-end
-
-audiowrite(strcat('Converted_Method 2_',pr,'_',conv,'_',num2str(lpcOrder),'.wav'),...
-    morph,fs_test);
 soundsc(morph,fs_test);
 
 %% Validation Stage
 
+fprintf("Select a file for Validation\n");
 [file,path] = uigetfile('*.wav');
 [val,fs_val] = audioread(fullfile(path,file)); %Load the validation utterance
-
-% N_min = min(length(morph),length(val)); 
-% morph = morph';
-% val = val';
-% morph = morph(1 : N_min); 
-% val = val(1 : N_min);
-% morph = morph';
-% val = val'; %Aligning the number of samples of both the morphed and validation utterances
 
 [a_val,g_val,r_val] = lpAnalysis(val,fs_val,lpcOrder,frameLen,hopLen,winName,preemphasise); %LP analysis done on the validation utterance
 lsf_val = lpc2lsf(a_val); %The LP coefficients are converted to LSF parameters to test performance of the conversion 
 
 %Mel Cepstrum Distortion
-
+morph = morph ./ (max(abs(morph)) + 0.01);
 m_morph = mfcc(val,fs_val,'NumCoeffs',25,'WindowLength',frameLen,'OverlapLength',(frameLen-hopLen))';
 m_val = mfcc(morph,fs_test,'NumCoeffs',25,'WindowLength',frameLen,'OverlapLength',(frameLen-hopLen))';
 [mm,mv,~,~] = dtws2(m_morph,m_val); %Accounting for timing errors
@@ -217,8 +211,33 @@ subplot(2,1,2);
 spectrogram(val,128,[],[],fs_val,'yaxis'); colorbar
 title('Spectrogram of Validation Speech');
 
-save('Trained Model_Method 2_' + pr + '_' + conv + '_LPC Order' + ' ' + num2str(lpcOrder),'netLSF');
-save('F0 Array_Method 2_' + pr + '_' + conv + '_LPC Order' + ' ' + num2str(lpcOrder),'F0_s','F0_t');
-save('Results_Method 2_' + pr + '_' + conv + '_LPC Order' + ' ' + num2str(lpcOrder) + '.txt','MCD','PLSF','-ascii');
-saveas(f,'Waveforms_Method 2_' + conv + '_' + pr + '_LPC Order' + ' ' + num2str(lpcOrder) + '.jpg');
-saveas(f1,'Spectrograms_Method 2_' + conv + '_' + pr + '_LPC Order' + ' ' + num2str(lpcOrder) + '.jpg');
+%% Saving Data
+saving = input('Do you wish to save the data ? {''Y'',''N''} : ');
+if(strcmp(saving,'Y'))
+    if(preemphasise == 1)
+        pr = 'Pre-Emphasised';
+    else
+        pr = 'Not Pre-Emphasised';
+    end
+
+    if(strcmp(nme_test,'SLT'))
+        conversion = 'F2M';
+    else
+        conversion = 'M2F';
+    end
+
+    audiowrite(strcat('Converted_',method,'_',pr,'_',conversion,'_LPC Order_',num2str(lpcOrder),'.wav'),...
+        morph,fs_test);
+    save(strcat('Trained Model_',method,'_',pr,'_',conversion,'_LPC Order_',num2str(lpcOrder)),'netLSF','F0_s','F0_t');
+    saveas(f,strcat('Waveforms_',method,'_',pr,'_',conversion,'_LPC Order_',num2str(lpcOrder),'.jpg'));
+    saveas(f1,strcat('Spectrograms_',method,'_',pr,'_',conversion,'_LPC Order_',num2str(lpcOrder),'.jpg'));
+
+    if(strcmp(pr,'Pre-Emphasised'))
+        pr = 'Yes';
+    else
+        pr = 'No';
+    end
+    fileID = fopen('Objective Evaluation Metrics.txt','a');
+    fprintf(fileID,'\r\n%-6d  %-12s  %-4s  %-9d  %-9f  %-9f',str2num(method(end)),pr,conversion,lpcOrder,MCD,PLSF);
+    fclose(fileID);
+end
