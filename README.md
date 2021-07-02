@@ -1,6 +1,6 @@
 # Voice-Conversion
 
-This repository contains the codes for the Voice Conversion model described in our paper titled 'Voice Conversion Using Spectral Mapping and TD-PSOLA', published in the Lecture Notes in Electrical Engineering, Springer. The paper can be found at the following URL
+This repository contains the codes for the Voice Conversion model described in our paper titled 'Voice Conversion Using Spectral Mapping and TD-PSOLA', published in the Lecture Notes in Electrical Engineering, vol. 736, Springer. The paper can be found at the following URL
 https://link.springer.com/chapter/10.1007/978-981-33-6987-0_17
 
 Two Methods of Voice Conversion have been proposed in this work
